@@ -1,0 +1,6 @@
+{
+  "name": "Bong Calculator",
+  "description": "A premium modern native Android scientific and basic calculator with glass-style UI, calculation history, and light/dark theme support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
