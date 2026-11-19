@@ -61,11 +61,6 @@ fun UnityBannerAdSlot(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val initState by UnityAdsManager.initState.collectAsStateWithLifecycle()
-    val bannersPaused by UnityAdsManager.bannersPausedForSession.collectAsStateWithLifecycle()
-
-    if (bannersPaused) {
-        return
-    }
 
     val shape = RoundedCornerShape(14.dp)
     val shouldLoadBanner = activity != null &&

@@ -30,6 +30,8 @@ data class CalculatorUiState(
     val isScientificMode: Boolean = false,
     val angleUnit: AngleUnit = AngleUnit.DEG,
     val hapticFeedbackEnabled: Boolean = true,
+    val isPremiumThemeUnlocked: Boolean = false,
+    val usePremiumTheme: Boolean = false,
     val history: List<CalculationHistoryEntity> = emptyList()
 )
 
@@ -66,6 +68,8 @@ class CalculatorViewModel(
             isScientificMode = prefs.isScientificMode,
             angleUnit = prefs.angleUnit,
             hapticFeedbackEnabled = prefs.hapticFeedbackEnabled,
+            isPremiumThemeUnlocked = prefs.isPremiumThemeUnlocked,
+            usePremiumTheme = prefs.usePremiumTheme,
             history = historyList
         )
     }.stateIn(
@@ -333,7 +337,9 @@ class CalculatorViewModel(
             isDarkTheme = current.isDarkTheme,
             isScientificMode = next,
             angleUnit = current.angleUnit,
-            hapticFeedbackEnabled = current.hapticFeedbackEnabled
+            hapticFeedbackEnabled = current.hapticFeedbackEnabled,
+            isPremiumThemeUnlocked = current.isPremiumThemeUnlocked,
+            usePremiumTheme = current.usePremiumTheme
         )
         viewModelScope.launch {
             preferencesRepository.setScientificMode(next)
@@ -347,7 +353,9 @@ class CalculatorViewModel(
             isDarkTheme = current.isDarkTheme,
             isScientificMode = current.isScientificMode,
             angleUnit = next,
-            hapticFeedbackEnabled = current.hapticFeedbackEnabled
+            hapticFeedbackEnabled = current.hapticFeedbackEnabled,
+            isPremiumThemeUnlocked = current.isPremiumThemeUnlocked,
+            usePremiumTheme = current.usePremiumTheme
         )
         viewModelScope.launch {
             preferencesRepository.setAngleUnit(next)
@@ -367,10 +375,15 @@ class CalculatorViewModel(
             isDarkTheme = isDark,
             isScientificMode = current.isScientificMode,
             angleUnit = current.angleUnit,
-            hapticFeedbackEnabled = current.hapticFeedbackEnabled
+            hapticFeedbackEnabled = current.hapticFeedbackEnabled,
+            isPremiumThemeUnlocked = current.isPremiumThemeUnlocked,
+            usePremiumTheme = false
         )
         viewModelScope.launch {
             preferencesRepository.setDarkTheme(isDark)
+            if (current.usePremiumTheme) {
+                preferencesRepository.setUsePremiumTheme(false)
+            }
         }
     }
 
@@ -380,10 +393,43 @@ class CalculatorViewModel(
             isDarkTheme = current.isDarkTheme,
             isScientificMode = current.isScientificMode,
             angleUnit = current.angleUnit,
-            hapticFeedbackEnabled = enabled
+            hapticFeedbackEnabled = enabled,
+            isPremiumThemeUnlocked = current.isPremiumThemeUnlocked,
+            usePremiumTheme = current.usePremiumTheme
         )
         viewModelScope.launch {
             preferencesRepository.setHapticFeedback(enabled)
+        }
+    }
+
+    fun onUnlockPremiumTheme() {
+        val current = uiState.value
+        _prefsOverride.value = com.example.data.repository.UserPreferences(
+            isDarkTheme = current.isDarkTheme,
+            isScientificMode = current.isScientificMode,
+            angleUnit = current.angleUnit,
+            hapticFeedbackEnabled = current.hapticFeedbackEnabled,
+            isPremiumThemeUnlocked = true,
+            usePremiumTheme = true
+        )
+        viewModelScope.launch {
+            preferencesRepository.unlockAndEnablePremiumTheme()
+        }
+    }
+
+    fun onSetUsePremiumTheme(enabled: Boolean) {
+        val current = uiState.value
+        if (!current.isPremiumThemeUnlocked) return
+        _prefsOverride.value = com.example.data.repository.UserPreferences(
+            isDarkTheme = current.isDarkTheme,
+            isScientificMode = current.isScientificMode,
+            angleUnit = current.angleUnit,
+            hapticFeedbackEnabled = current.hapticFeedbackEnabled,
+            isPremiumThemeUnlocked = true,
+            usePremiumTheme = enabled
+        )
+        viewModelScope.launch {
+            preferencesRepository.setUsePremiumTheme(enabled)
         }
     }
 

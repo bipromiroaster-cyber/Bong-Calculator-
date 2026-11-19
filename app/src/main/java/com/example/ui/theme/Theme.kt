@@ -79,6 +79,28 @@ private val LightExtendedColors = BongExtendedColors(
     textSecondary = LightTextSecondary
 )
 
+private val PremiumExtendedColors = BongExtendedColors(
+    isDark = true,
+    bgTop = PremiumBgTop,
+    bgMid = PremiumBgMid,
+    bgBottom = PremiumBgBottom,
+    glowBlue = PremiumGlowGold,
+    glowPurple = PremiumGlowTeal,
+    accentBlue = PremiumGold,
+    accentPurple = PremiumTeal,
+    dangerAccent = PremiumRose,
+    displaySurface = PremiumGlassDisplayBg,
+    keySurface = PremiumGlassSurface,
+    operatorSurface = PremiumGlassOperator,
+    scientificSurface = PremiumGlassScientific,
+    dangerSurface = PremiumGlassDanger,
+    glassBorderHighlight = PremiumGlassBorderLight,
+    glassBorderSubtle = PremiumGlassBorderDark,
+    sheetSurface = PremiumSheetSurface,
+    textPrimary = DarkTextPrimary,
+    textSecondary = Color(0xFFCBD5E1)
+)
+
 val LocalBongColors = staticCompositionLocalOf { DarkExtendedColors }
 
 private val DarkColorScheme = darkColorScheme(
@@ -123,6 +145,27 @@ private val LightColorScheme = lightColorScheme(
     outline = LightGlassBorderDark
 )
 
+private val PremiumColorScheme = darkColorScheme(
+    primary = PremiumGold,
+    onPrimary = Color(0xFF1A1200),
+    primaryContainer = Color(0xFF3F2B00),
+    onPrimaryContainer = DarkTextPrimary,
+    secondary = PremiumTeal,
+    onSecondary = Color(0xFF021F1A),
+    secondaryContainer = Color(0xFF0A3631),
+    onSecondaryContainer = DarkTextPrimary,
+    tertiary = PremiumGold,
+    background = PremiumBgTop,
+    onBackground = DarkTextPrimary,
+    surface = PremiumSheetSurface,
+    onSurface = DarkTextPrimary,
+    surfaceVariant = PremiumGlassSurface,
+    onSurfaceVariant = Color(0xFFCBD5E1),
+    error = PremiumRose,
+    onError = Color.White,
+    outline = PremiumGlassBorderLight
+)
+
 private val BongShapes = Shapes(
     small = RoundedCornerShape(14.dp),
     medium = RoundedCornerShape(20.dp),
@@ -132,10 +175,19 @@ private val BongShapes = Shapes(
 @Composable
 fun BongCalculatorTheme(
     darkTheme: Boolean = true,
+    usePremiumTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    val extendedColors = if (darkTheme) DarkExtendedColors else LightExtendedColors
+    val colorScheme = when {
+        usePremiumTheme -> PremiumColorScheme
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }
+    val extendedColors = when {
+        usePremiumTheme -> PremiumExtendedColors
+        darkTheme -> DarkExtendedColors
+        else -> LightExtendedColors
+    }
 
     CompositionLocalProvider(LocalBongColors provides extendedColors) {
         MaterialTheme(

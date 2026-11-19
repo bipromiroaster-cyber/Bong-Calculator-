@@ -2,6 +2,8 @@ package com.example.ads
 
 import android.app.Activity
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import com.unity3d.ads.IUnityAdsInitializationListener
@@ -24,12 +26,16 @@ enum class UnityInitState {
 
 /**
  * Lifecycle-safe manager for Unity Ads initialization, interstitial ads (natural breaks only),
- * and optional rewarded ads. Holds no Activity references across lifecycles.
+ * and rewarded ads with strict completion verification.
+ * Holds no Activity references across lifecycles.
  */
 object UnityAdsManager {
     private const val TAG = "UnityAdsManager"
 
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val initRequested = AtomicBoolean(false)
+    private val interstitialLoading = AtomicBoolean(false)
+    private val rewardedLoading = AtomicBoolean(false)
 
     private val _initState = MutableStateFlow(
         if (UnityAdsConfig.isGameIdConfigured()) UnityInitState.INITIALIZING else UnityInitState.NOT_CONFIGURED
@@ -42,9 +48,6 @@ object UnityAdsManager {
     private val _isRewardedReady = MutableStateFlow(false)
     val isRewardedReady: StateFlow<Boolean> = _isRewardedReady.asStateFlow()
 
-    private val _bannersPausedForSession = MutableStateFlow(false)
-    val bannersPausedForSession: StateFlow<Boolean> = _bannersPausedForSession.asStateFlow()
-
     @Volatile
     private var completedCalculationsSinceAd: Int = 0
 
@@ -55,7 +58,7 @@ object UnityAdsManager {
         val appContext = context.applicationContext
         if (!UnityAdsConfig.isGameIdConfigured()) {
             _initState.value = UnityInitState.NOT_CONFIGURED
-            Log.i(TAG, "Unity Ads Game ID is still a placeholder; skipping SDK initialization.")
+            Log.i(TAG, "Unity Ads Game ID is not configured; skipping SDK initialization.")
             return
         }
         if (UnityAds.isInitialized) {
@@ -74,7 +77,10 @@ object UnityAdsManager {
             UnityAdsConfig.TEST_MODE,
             object : IUnityAdsInitializationListener {
                 override fun onInitializationComplete() {
-                    Log.d(TAG, "Unity Ads initialization complete (testMode=${UnityAdsConfig.TEST_MODE})")
+                    Log.d(
+                        TAG,
+                        "Unity Ads initialized: gameId=${UnityAdsConfig.UNITY_GAME_ID}, testMode=${UnityAdsConfig.TEST_MODE}"
+                    )
                     _initState.value = UnityInitState.INITIALIZED
                     preloadAdsIfConfigured()
                 }
@@ -106,11 +112,14 @@ object UnityAdsManager {
 
     fun loadInterstitial() {
         if (!UnityAds.isInitialized || !UnityAdsConfig.isInterstitialConfigured()) return
+        if (_isInterstitialReady.value || !interstitialLoading.compareAndSet(false, true)) return
+
         UnityAds.load(
             UnityAdsConfig.INTERSTITIAL_AD_UNIT_ID,
             UnityAdsLoadOptions(),
             object : IUnityAdsLoadListener {
                 override fun onUnityAdsAdLoaded(placementId: String?) {
+                    interstitialLoading.set(false)
                     Log.d(TAG, "Interstitial loaded: $placementId")
                     _isInterstitialReady.value = true
                 }
@@ -120,6 +129,7 @@ object UnityAdsManager {
                     error: UnityAds.UnityAdsLoadError?,
                     message: String?
                 ) {
+                    interstitialLoading.set(false)
                     Log.w(TAG, "Interstitial failed to load ($placementId): $error - $message")
                     _isInterstitialReady.value = false
                 }
@@ -128,12 +138,11 @@ object UnityAdsManager {
     }
 
     /**
-     * Shows an interstitial ad only at natural navigation breaks (e.g., closing History or Settings),
-     * subject to minimum completed calculations and cooldown pacing. Never invoked on keypad presses.
+     * Shows an interstitial ad only at natural breaks (e.g., closing History or Settings),
+     * subject to minimum completed calculations and cooldown pacing. Never shown on keypad taps.
      */
     fun maybeShowInterstitialAtNaturalBreak(activity: Activity?): Boolean {
         if (activity == null || activity.isFinishing || activity.isDestroyed) return false
-        if (_bannersPausedForSession.value) return false
         if (!UnityAds.isInitialized || !UnityAdsConfig.isInterstitialConfigured()) return false
         if (!_isInterstitialReady.value) {
             loadInterstitial()
@@ -189,11 +198,14 @@ object UnityAdsManager {
 
     fun loadRewarded() {
         if (!UnityAds.isInitialized || !UnityAdsConfig.isRewardedConfigured()) return
+        if (_isRewardedReady.value || !rewardedLoading.compareAndSet(false, true)) return
+
         UnityAds.load(
             UnityAdsConfig.REWARDED_AD_UNIT_ID,
             UnityAdsLoadOptions(),
             object : IUnityAdsLoadListener {
                 override fun onUnityAdsAdLoaded(placementId: String?) {
+                    rewardedLoading.set(false)
                     Log.d(TAG, "Rewarded ad loaded: $placementId")
                     _isRewardedReady.value = true
                 }
@@ -203,6 +215,7 @@ object UnityAdsManager {
                     error: UnityAds.UnityAdsLoadError?,
                     message: String?
                 ) {
+                    rewardedLoading.set(false)
                     Log.w(TAG, "Rewarded ad failed to load ($placementId): $error - $message")
                     _isRewardedReady.value = false
                 }
@@ -211,25 +224,28 @@ object UnityAdsManager {
     }
 
     /**
-     * Shows an optional rewarded video ad and invokes [onRewardEarned] only when
-     * UnityAdsShowCompletionState.COMPLETED is received.
+     * Shows a rewarded ad (`BP_Rewarded_Android`) and invokes [onRewardEarned] strictly when
+     * `UnityAdsShowCompletionState.COMPLETED` is returned. Never grants rewards on skip or failure.
      */
     fun showRewardedAd(
         activity: Activity?,
         onRewardEarned: () -> Unit,
+        onAdSkipped: () -> Unit,
         onNotReadyOrFailed: (String) -> Unit
     ) {
         if (activity == null || activity.isFinishing || activity.isDestroyed) {
-            onNotReadyOrFailed("Activity unavailable")
+            mainHandler.post { onNotReadyOrFailed("Activity unavailable") }
             return
         }
         if (!UnityAdsConfig.isRewardedConfigured()) {
-            onNotReadyOrFailed("Unity Rewarded Ad Unit ID is not configured yet.")
+            mainHandler.post { onNotReadyOrFailed("Unity Rewarded Ad Unit ID is not configured.") }
             return
         }
         if (!UnityAds.isInitialized || !_isRewardedReady.value) {
             loadRewarded()
-            onNotReadyOrFailed("Rewarded ad is still loading. Please try again in a moment.")
+            mainHandler.post {
+                onNotReadyOrFailed("Rewarded ad is loading. Please try again in a moment.")
+            }
             return
         }
 
@@ -245,7 +261,9 @@ object UnityAdsManager {
                     message: String?
                 ) {
                     Log.w(TAG, "Rewarded show failed ($placementId): $error - $message")
-                    onNotReadyOrFailed(message ?: "Unable to display rewarded ad.")
+                    mainHandler.post {
+                        onNotReadyOrFailed(message ?: "Unable to display rewarded ad.")
+                    }
                     loadRewarded()
                 }
 
@@ -263,8 +281,9 @@ object UnityAdsManager {
                 ) {
                     Log.d(TAG, "Rewarded ad complete ($placementId): $state")
                     if (state == UnityAds.UnityAdsShowCompletionState.COMPLETED) {
-                        _bannersPausedForSession.value = true
-                        onRewardEarned()
+                        mainHandler.post { onRewardEarned() }
+                    } else {
+                        mainHandler.post { onAdSkipped() }
                     }
                     loadRewarded()
                 }

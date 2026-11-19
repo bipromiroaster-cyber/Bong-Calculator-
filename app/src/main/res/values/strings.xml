@@ -18,11 +18,12 @@
     <string name="angle_rad">RAD</string>
     <string name="setting_haptics">Haptic Feedback</string>
     <string name="setting_haptics_subtitle">Subtle vibration on keypad press</string>
-    <string name="setting_ads_slot">Support &amp; Ads</string>
-    <string name="setting_ads_slot_subtitle">Watch an optional video ad to pause banners for this session</string>
-    <string name="watch_rewarded_ad">Watch Ad</string>
-    <string name="reward_banners_paused">Banners paused for this session. Thank you!</string>
-    <string name="reward_banners_already_paused">Banner ads are already paused for this session</string>
+    <string name="setting_premium_theme">Premium Theme</string>
+    <string name="setting_premium_theme_locked_subtitle">Obsidian Gold &amp; Teal luxury glass style</string>
+    <string name="setting_premium_theme_unlocked_subtitle">Obsidian Gold &amp; Teal unlocked</string>
+    <string name="watch_ad_unlock_premium_theme">Watch Ad &amp; Unlock Premium Theme</string>
+    <string name="reward_premium_theme_unlocked">Premium Theme unlocked!</string>
+    <string name="reward_ad_skipped">Watch the full ad to unlock Premium Theme.</string>
     <string name="copy_result">Copy result</string>
     <string name="copied_to_clipboard">Copied to clipboard</string>
     <string name="nothing_to_copy">Nothing to copy</string>

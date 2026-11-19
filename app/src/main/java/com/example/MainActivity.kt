@@ -34,9 +34,10 @@ class MainActivity : ComponentActivity() {
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-            LaunchedEffect(uiState.isDarkTheme) {
+            val effectiveDark = uiState.isDarkTheme || uiState.usePremiumTheme
+            LaunchedEffect(effectiveDark) {
                 enableEdgeToEdge(
-                    statusBarStyle = if (uiState.isDarkTheme) {
+                    statusBarStyle = if (effectiveDark) {
                         SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
                     } else {
                         SystemBarStyle.light(
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
                             android.graphics.Color.TRANSPARENT
                         )
                     },
-                    navigationBarStyle = if (uiState.isDarkTheme) {
+                    navigationBarStyle = if (effectiveDark) {
                         SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
                     } else {
                         SystemBarStyle.light(
@@ -55,7 +56,10 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-            BongCalculatorTheme(darkTheme = uiState.isDarkTheme) {
+            BongCalculatorTheme(
+                darkTheme = uiState.isDarkTheme,
+                usePremiumTheme = uiState.usePremiumTheme
+            ) {
                 CalculatorScreen(viewModel = viewModel)
             }
         }

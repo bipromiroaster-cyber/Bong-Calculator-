@@ -51,3 +51,25 @@ val LightSheetSurface = Color(0xFAF4F7FF)
 
 val LightTextPrimary = Color(0xFF0F172A)
 val LightTextSecondary = Color(0xFF475569)
+
+// Premium Theme Palette — Obsidian Midnight with Radiant Gold & Neon Teal accents
+val PremiumBgTop = Color(0xFF04050B)
+val PremiumBgMid = Color(0xFF0B1022)
+val PremiumBgBottom = Color(0xFF170D2E)
+
+val PremiumGlowGold = Color(0x30FACC15)
+val PremiumGlowTeal = Color(0x2B2DD4BF)
+
+val PremiumGold = Color(0xFFFACC15)
+val PremiumTeal = Color(0xFF2DD4BF)
+val PremiumRose = Color(0xFFFB7185)
+
+val PremiumGlassDisplayBg = Color(0xA60E132B)
+val PremiumGlassSurface = Color(0x80171D3B)
+val PremiumGlassOperator = Color(0x4DF59E0B)
+val PremiumGlassScientific = Color(0x4D0D9488)
+val PremiumGlassDanger = Color(0x479F1239)
+val PremiumGlassBorderLight = Color(0x52FDE68A)
+val PremiumGlassBorderDark = Color(0x242DD4BF)
+val PremiumSheetSurface = Color(0xF50A0E1F)
+

@@ -12,15 +12,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AdsClick
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material.icons.outlined.Vibration
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,11 +53,13 @@ fun SettingsBottomSheet(
     isDarkTheme: Boolean,
     angleUnit: AngleUnit,
     hapticEnabled: Boolean,
-    bannersPaused: Boolean,
+    isPremiumThemeUnlocked: Boolean,
+    usePremiumTheme: Boolean,
     isRewardedReady: Boolean,
     onToggleDarkTheme: (Boolean) -> Unit,
     onSetAngleUnit: (AngleUnit) -> Unit,
     onToggleHapticFeedback: (Boolean) -> Unit,
+    onSetUsePremiumTheme: (Boolean) -> Unit,
     onWatchRewardedAd: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -167,33 +170,78 @@ fun SettingsBottomSheet(
                 )
             }
 
-            // Optional Unity Rewarded Ad to pause banners for current session
-            SettingRowCard(
-                icon = Icons.Outlined.AdsClick,
-                title = stringResource(R.string.setting_ads_slot),
-                subtitle = if (bannersPaused) {
-                    stringResource(R.string.reward_banners_already_paused)
-                } else {
-                    stringResource(R.string.setting_ads_slot_subtitle)
+            // Premium Theme Section — Unlocked Toggle or Clearly Visible Rewarded Ad Unlock Button
+            if (isPremiumThemeUnlocked) {
+                SettingRowCard(
+                    icon = Icons.Outlined.AutoAwesome,
+                    title = stringResource(R.string.setting_premium_theme),
+                    subtitle = stringResource(R.string.setting_premium_theme_unlocked_subtitle)
+                ) {
+                    Switch(
+                        checked = usePremiumTheme,
+                        onCheckedChange = onSetUsePremiumTheme,
+                        modifier = Modifier.testTag("premium_theme_switch"),
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = bongColors.accentBlue
+                        )
+                    )
                 }
-            ) {
-                if (!bannersPaused) {
-                    FilledTonalButton(
+            } else {
+                val cardShape = RoundedCornerShape(18.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(cardShape)
+                        .background(bongColors.scientificSurface.copy(alpha = 0.72f))
+                        .border(width = 1.dp, color = bongColors.glassBorderHighlight.copy(alpha = 0.45f), shape = cardShape)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.AutoAwesome,
+                            contentDescription = null,
+                            tint = bongColors.accentBlue,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.setting_premium_theme),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = bongColors.textPrimary
+                            )
+                            Text(
+                                text = stringResource(R.string.setting_premium_theme_locked_subtitle),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = bongColors.textSecondary
+                            )
+                        }
+                    }
+
+                    Button(
                         onClick = onWatchRewardedAd,
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = if (isRewardedReady) {
-                                bongColors.accentBlue.copy(alpha = 0.22f)
-                            } else {
-                                bongColors.scientificSurface
-                            },
-                            contentColor = bongColors.accentBlue
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isRewardedReady) bongColors.accentBlue else bongColors.accentPurple,
+                            contentColor = Color.White
                         ),
                         modifier = Modifier
+                            .fillMaxWidth()
                             .minimumInteractiveComponentSize()
                             .testTag("watch_rewarded_ad_button")
                     ) {
+                        Icon(
+                            imageVector = Icons.Outlined.PlayCircleOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.size(8.dp))
                         Text(
-                            text = stringResource(R.string.watch_rewarded_ad),
+                            text = stringResource(R.string.watch_ad_unlock_premium_theme),
                             style = MaterialTheme.typography.labelMedium
                         )
                     }

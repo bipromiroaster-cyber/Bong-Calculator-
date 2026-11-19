@@ -80,7 +80,6 @@ fun CalculatorScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val activity = remember(context) { context.findActivity() }
-    val bannersPaused by UnityAdsManager.bannersPausedForSession.collectAsStateWithLifecycle()
     val isRewardedReady by UnityAdsManager.isRewardedReady.collectAsStateWithLifecycle()
 
     var showHistorySheet by remember { mutableStateOf(false) }
@@ -88,7 +87,8 @@ fun CalculatorScreen(
 
     val copiedMessage = stringResource(R.string.copied_to_clipboard)
     val nothingToCopyMessage = stringResource(R.string.nothing_to_copy)
-    val rewardGrantedMessage = stringResource(R.string.reward_banners_paused)
+    val rewardGrantedMessage = stringResource(R.string.reward_premium_theme_unlocked)
+    val rewardSkippedMessage = stringResource(R.string.reward_ad_skipped)
 
     fun copyToClipboard(text: String?) {
         if (text.isNullOrBlank()) {
@@ -361,7 +361,8 @@ fun CalculatorScreen(
             isDarkTheme = uiState.isDarkTheme,
             angleUnit = uiState.angleUnit,
             hapticEnabled = uiState.hapticFeedbackEnabled,
-            bannersPaused = bannersPaused,
+            isPremiumThemeUnlocked = uiState.isPremiumThemeUnlocked,
+            usePremiumTheme = uiState.usePremiumTheme,
             isRewardedReady = isRewardedReady,
             onToggleDarkTheme = viewModel::onSetDarkTheme,
             onSetAngleUnit = { unit: AngleUnit ->
@@ -370,14 +371,22 @@ fun CalculatorScreen(
                 }
             },
             onToggleHapticFeedback = viewModel::onSetHapticFeedback,
+            onSetUsePremiumTheme = viewModel::onSetUsePremiumTheme,
             onWatchRewardedAd = {
                 showSettingsSheet = false
                 UnityAdsManager.showRewardedAd(
                     activity = activity,
                     onRewardEarned = {
+                        viewModel.onUnlockPremiumTheme()
                         scope.launch {
                             snackbarHostState.currentSnackbarData?.dismiss()
                             snackbarHostState.showSnackbar(rewardGrantedMessage)
+                        }
+                    },
+                    onAdSkipped = {
+                        scope.launch {
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                            snackbarHostState.showSnackbar(rewardSkippedMessage)
                         }
                     },
                     onNotReadyOrFailed = { message ->

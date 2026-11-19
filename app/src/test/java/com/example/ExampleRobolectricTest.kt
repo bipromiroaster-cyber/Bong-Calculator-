@@ -2,6 +2,7 @@ package com.example
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -85,5 +86,8 @@ class ExampleRobolectricTest {
                 false
             }
         }
+        composeTestRule.onNodeWithTag("watch_rewarded_ad_button")
+            .assertTextContains("Watch Ad & Unlock Premium Theme")
+        composeTestRule.onNodeWithTag("premium_theme_switch").assertDoesNotExist()
     }
 }
