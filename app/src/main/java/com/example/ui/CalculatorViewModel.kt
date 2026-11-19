@@ -3,6 +3,7 @@ package com.example.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.ads.UnityAdsManager
 import com.example.data.local.CalculationHistoryEntity
 import com.example.data.repository.CalculatorRepository
 import com.example.data.repository.UserPreferencesRepository
@@ -38,6 +39,7 @@ class CalculatorViewModel(
 ) : ViewModel() {
 
     private val _inputState = MutableStateFlow(InputState())
+    private val _prefsOverride = MutableStateFlow<com.example.data.repository.UserPreferences?>(null)
 
     private data class InputState(
         val expression: String = "",
@@ -50,8 +52,10 @@ class CalculatorViewModel(
     val uiState: StateFlow<CalculatorUiState> = combine(
         _inputState,
         preferencesRepository.preferencesFlow,
+        _prefsOverride,
         calculatorRepository.history
-    ) { input, prefs, historyList ->
+    ) { input, storedPrefs, overridePrefs, historyList ->
+        val prefs = overridePrefs ?: storedPrefs
         CalculatorUiState(
             expression = input.expression,
             displayResult = input.displayResult,
@@ -285,6 +289,7 @@ class CalculatorViewModel(
                     justEvaluated = true
                 )
                 if (current.expression != result.formatted) {
+                    UnityAdsManager.recordCompletedCalculation()
                     viewModelScope.launch {
                         calculatorRepository.saveCalculation(
                             expression = current.expression,

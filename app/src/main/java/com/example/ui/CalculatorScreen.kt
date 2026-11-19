@@ -58,7 +58,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
+import com.example.ads.UnityAdsManager
 import com.example.ads.UnityBannerAdSlot
+import com.example.ads.findActivity
 import com.example.domain.AngleUnit
 import com.example.ui.components.CalculatorDisplay
 import com.example.ui.components.CalculatorKeypad
@@ -77,12 +79,16 @@ fun CalculatorScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val activity = remember(context) { context.findActivity() }
+    val bannersPaused by UnityAdsManager.bannersPausedForSession.collectAsStateWithLifecycle()
+    val isRewardedReady by UnityAdsManager.isRewardedReady.collectAsStateWithLifecycle()
 
     var showHistorySheet by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
 
     val copiedMessage = stringResource(R.string.copied_to_clipboard)
     val nothingToCopyMessage = stringResource(R.string.nothing_to_copy)
+    val rewardGrantedMessage = stringResource(R.string.reward_banners_paused)
 
     fun copyToClipboard(text: String?) {
         if (text.isNullOrBlank()) {
@@ -159,21 +165,20 @@ fun CalculatorScreen(
             ) {
                 val isWideLayout = maxWidth >= 720.dp
                 val availHeight = maxHeight
+                val isShortViewport = availHeight < 680.dp
+                val isCompactDisplay = (uiState.isScientificMode && availHeight < 760.dp) || isShortViewport
 
                 // Compute responsive button heights so display + keypad + reserved banner fit cleanly
-                val spacing = if (availHeight < 660.dp) 7.dp else 10.dp
+                val spacing = if (availHeight < 720.dp) 6.dp else 10.dp
                 val targetButtonHeight = when {
-                    uiState.isScientificMode && availHeight < 700.dp -> 48.dp
-                    uiState.isScientificMode && availHeight < 820.dp -> 54.dp
-                    uiState.isScientificMode -> 60.dp
-                    availHeight < 660.dp -> 52.dp
+                    uiState.isScientificMode && availHeight < 740.dp -> 48.dp
+                    uiState.isScientificMode && availHeight < 840.dp -> 52.dp
+                    uiState.isScientificMode -> 58.dp
+                    availHeight < 680.dp -> 50.dp
                     availHeight < 780.dp -> 60.dp
                     else -> 68.dp
                 }
-                val sciButtonHeight = when {
-                    availHeight < 700.dp -> 48.dp
-                    else -> 50.dp
-                }
+                val sciButtonHeight = 48.dp
 
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -186,7 +191,7 @@ fun CalculatorScreen(
                         showHistoryIcon = !isWideLayout
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     if (isWideLayout) {
                         // Expanded / Tablet Adaptive Layout: Side-by-side Calculator + History Pane
@@ -212,9 +217,10 @@ fun CalculatorScreen(
                                     angleUnit = uiState.angleUnit,
                                     onCopyResult = { copyToClipboard(viewModel.getCopyableResult()) },
                                     onToggleAngleUnit = viewModel::onToggleAngleUnit,
+                                    isCompact = isCompactDisplay,
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
                                 CalculatorKeypad(
                                     isScientificMode = uiState.isScientificMode,
                                     angleUnit = uiState.angleUnit,
@@ -266,12 +272,18 @@ fun CalculatorScreen(
                         }
                     } else {
                         // Phone / Compact & Medium Layout
+                        val phoneScrollModifier = if (isShortViewport) {
+                            Modifier.verticalScroll(rememberScrollState())
+                        } else {
+                            Modifier
+                        }
                         Column(
                             modifier = Modifier
                                 .weight(1f)
                                 .widthIn(max = 540.dp)
                                 .align(Alignment.CenterHorizontally)
-                                .fillMaxWidth(),
+                                .fillMaxWidth()
+                                .then(phoneScrollModifier),
                             verticalArrangement = Arrangement.Bottom
                         ) {
                             CalculatorDisplay(
@@ -284,10 +296,11 @@ fun CalculatorScreen(
                                 angleUnit = uiState.angleUnit,
                                 onCopyResult = { copyToClipboard(viewModel.getCopyableResult()) },
                                 onToggleAngleUnit = viewModel::onToggleAngleUnit,
-                                modifier = Modifier.weight(1f, fill = true)
+                                isCompact = isCompactDisplay,
+                                modifier = if (isShortViewport) Modifier else Modifier.weight(1f, fill = true)
                             )
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
                             CalculatorKeypad(
                                 isScientificMode = uiState.isScientificMode,
@@ -336,7 +349,10 @@ fun CalculatorScreen(
             onCopyResult = { copyToClipboard(it) },
             onDeleteEntry = viewModel::onDeleteHistoryItem,
             onClearHistory = viewModel::onClearHistory,
-            onDismiss = { showHistorySheet = false }
+            onDismiss = {
+                showHistorySheet = false
+                UnityAdsManager.maybeShowInterstitialAtNaturalBreak(activity)
+            }
         )
     }
 
@@ -345,6 +361,8 @@ fun CalculatorScreen(
             isDarkTheme = uiState.isDarkTheme,
             angleUnit = uiState.angleUnit,
             hapticEnabled = uiState.hapticFeedbackEnabled,
+            bannersPaused = bannersPaused,
+            isRewardedReady = isRewardedReady,
             onToggleDarkTheme = viewModel::onSetDarkTheme,
             onSetAngleUnit = { unit: AngleUnit ->
                 if (uiState.angleUnit != unit) {
@@ -352,7 +370,28 @@ fun CalculatorScreen(
                 }
             },
             onToggleHapticFeedback = viewModel::onSetHapticFeedback,
-            onDismiss = { showSettingsSheet = false }
+            onWatchRewardedAd = {
+                showSettingsSheet = false
+                UnityAdsManager.showRewardedAd(
+                    activity = activity,
+                    onRewardEarned = {
+                        scope.launch {
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                            snackbarHostState.showSnackbar(rewardGrantedMessage)
+                        }
+                    },
+                    onNotReadyOrFailed = { message ->
+                        scope.launch {
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                            snackbarHostState.showSnackbar(message)
+                        }
+                    }
+                )
+            },
+            onDismiss = {
+                showSettingsSheet = false
+                UnityAdsManager.maybeShowInterstitialAtNaturalBreak(activity)
+            }
         )
     }
 }

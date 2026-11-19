@@ -18,7 +18,9 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material.icons.outlined.Vibration
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,9 +52,12 @@ fun SettingsBottomSheet(
     isDarkTheme: Boolean,
     angleUnit: AngleUnit,
     hapticEnabled: Boolean,
+    bannersPaused: Boolean,
+    isRewardedReady: Boolean,
     onToggleDarkTheme: (Boolean) -> Unit,
     onSetAngleUnit: (AngleUnit) -> Unit,
     onToggleHapticFeedback: (Boolean) -> Unit,
+    onWatchRewardedAd: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -162,12 +167,38 @@ fun SettingsBottomSheet(
                 )
             }
 
-            // Unity Ads Banner Slot Info
+            // Optional Unity Rewarded Ad to pause banners for current session
             SettingRowCard(
                 icon = Icons.Outlined.AdsClick,
                 title = stringResource(R.string.setting_ads_slot),
-                subtitle = stringResource(R.string.setting_ads_slot_subtitle)
-            ) {}
+                subtitle = if (bannersPaused) {
+                    stringResource(R.string.reward_banners_already_paused)
+                } else {
+                    stringResource(R.string.setting_ads_slot_subtitle)
+                }
+            ) {
+                if (!bannersPaused) {
+                    FilledTonalButton(
+                        onClick = onWatchRewardedAd,
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = if (isRewardedReady) {
+                                bongColors.accentBlue.copy(alpha = 0.22f)
+                            } else {
+                                bongColors.scientificSurface
+                            },
+                            contentColor = bongColors.accentBlue
+                        ),
+                        modifier = Modifier
+                            .minimumInteractiveComponentSize()
+                            .testTag("watch_rewarded_ad_button")
+                    ) {
+                        Text(
+                            text = stringResource(R.string.watch_rewarded_ad),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
         }

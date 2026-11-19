@@ -62,4 +62,28 @@ class ExampleRobolectricTest {
 
         composeTestRule.onNodeWithTag("display_primary_text").assertTextEquals("0.5")
     }
+
+    @Test
+    fun `unity ads configuration uses real ids with test mode enabled and settings shows rewarded ad button`() {
+        assertEquals("800444930", com.example.ads.UnityAdsConfig.UNITY_GAME_ID)
+        assertEquals("BP_Banner_Android", com.example.ads.UnityAdsConfig.BANNER_AD_UNIT_ID)
+        assertEquals("BP_Interstitial_Android", com.example.ads.UnityAdsConfig.INTERSTITIAL_AD_UNIT_ID)
+        assertEquals("BP_Rewarded_Android", com.example.ads.UnityAdsConfig.REWARDED_AD_UNIT_ID)
+        org.junit.Assert.assertTrue(com.example.ads.UnityAdsConfig.TEST_MODE)
+        org.junit.Assert.assertTrue(com.example.ads.UnityAdsConfig.isGameIdConfigured())
+        org.junit.Assert.assertTrue(com.example.ads.UnityAdsConfig.isBannerConfigured())
+        org.junit.Assert.assertTrue(com.example.ads.UnityAdsConfig.isInterstitialConfigured())
+        org.junit.Assert.assertTrue(com.example.ads.UnityAdsConfig.isRewardedConfigured())
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("top_settings_button").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 3000) {
+            try {
+                composeTestRule.onNodeWithTag("watch_rewarded_ad_button").assertIsDisplayed()
+                true
+            } catch (_: AssertionError) {
+                false
+            }
+        }
+    }
 }
